@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# next
+web/.next/
+web/out/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+
+# server data
+server/data/
+
+# hardhat
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/coverage/
+contracts/deployments/
+
+# env
+.env
+.env.local
+*.env
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log

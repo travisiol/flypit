@@ -1,0 +1,14 @@
+{
+  "name": "flypit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FLYPIT \u2014 a slither pit where the mass is money. Three packages, no workspaces: web/ (Next), server/ (the arena), contracts/ (Hardhat).",
+  "scripts": {
+    "install:all": "npm --prefix web install && npm --prefix server install && npm --prefix contracts install",
+    "dev:web": "npm --prefix web run dev",
+    "dev:server": "npm --prefix server run dev",
+    "test": "npm --prefix web run sim && npm --prefix web run smooth && npm --prefix contracts test",
+    "check": "npm --prefix web run lint && npm --prefix web run typecheck && npm --prefix server run typecheck",
+    "build": "npm --prefix web run build"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "flypit-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FLYPIT arena server: the authoritative 20 Hz simulation, the coin ledger, deposits watched on chain, extraction vouchers signed for the Arena contract.",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.56.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}
