@@ -111,23 +111,34 @@ export function EnterPanel({ client, version, onOpen }: { client: GameClient; ve
             {/* Lobby */}
             <div className="flex items-end justify-between gap-4 rounded-2xl border border-line bg-black/25 px-4 py-3">
               <div>
-                <div className="label">Your lobby</div>
+                <div className="label">{client.practice ? "Practice lobby" : "Your lobby"}</div>
                 <div className="num text-2xl font-semibold text-gold">
                   {tokens(lobby)} <span className="text-sm text-ink-3">{symbol}</span>
                 </div>
-                <div className="mt-0.5 text-[12px] text-ink-3">{client.you.name ?? shortAddress(client.you.address)} · deposited, not in the pit</div>
+                <div className="mt-0.5 text-[12px] text-ink-3">
+                  {client.practice ? "play money · refills after every life" : `${client.you.name ?? shortAddress(client.you.address)} · deposited, not in the pit`}
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button type="button" className="btn btn-ghost h-9 px-3 text-[12.5px]" onClick={() => onOpen("bank")}>
-                  Bank
-                </button>
-                <button type="button" className="btn btn-ghost h-9 px-3 text-[12.5px]" onClick={wallet.signOut}>
-                  Sign out
-                </button>
-              </div>
+              {!client.practice && (
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-ghost h-9 px-3 text-[12.5px]" onClick={() => onOpen("bank")}>
+                    Bank
+                  </button>
+                  <button type="button" className="btn btn-ghost h-9 px-3 text-[12.5px]" onClick={wallet.signOut}>
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
 
-            {w?.live ? (
+            {client.practice ? (
+              <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-[13px] text-ink-2">
+                <div className="mb-1 font-semibold text-gold">Practice pit</div>
+                No arena is reachable from this page, so this pit runs in your browser: same rules, same clocks, the same bots —
+                on play money. Nothing won or lost here is real. The money game needs the arena server online; the page keeps
+                looking for it.
+              </div>
+            ) : w?.live ? (
               <Deposit client={client} symbol={symbol} />
             ) : (
               <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-[13px] text-ink-2">

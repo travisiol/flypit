@@ -41,14 +41,16 @@ export function Hud({ client, version, onOpen }: { client: GameClient; version: 
             <Wordmark />
             <span className="hidden h-4 w-px bg-white/10 sm:block" />
             <span className="pill">
-              <i className="dot" style={{ background: w ? (w.live ? "#c8ff3d" : "#ffd166") : "#6b7285" }} />
-              {client.phase === "offline" || client.phase === "connecting"
-                ? client.phase === "offline"
-                  ? "server offline"
-                  : "connecting…"
-                : w?.live
-                  ? "live on Robinhood Chain"
-                  : "no chain yet"}
+              <i className="dot" style={{ background: client.practice ? "#ffd166" : w ? (w.live ? "#c8ff3d" : "#ffd166") : "#6b7285" }} />
+              {client.practice
+                ? "practice pit · play money"
+                : client.phase === "offline" || client.phase === "connecting"
+                  ? client.phase === "offline"
+                    ? "server offline"
+                    : "connecting…"
+                  : w?.live
+                    ? "live on Robinhood Chain"
+                    : "no chain yet"}
             </span>
           </div>
           <div className="pointer-events-auto flex flex-wrap gap-2">
@@ -70,7 +72,7 @@ export function Hud({ client, version, onOpen }: { client: GameClient; version: 
             <span className="sm:hidden">?</span>
             <span className="hidden sm:inline">How it works</span>
           </button>
-          {signedIn && (
+          {signedIn && !client.practice && (
             <button type="button" className="btn btn-ghost h-9 px-3 text-[13px] sm:px-4" onClick={() => onOpen("bank")}>
               Bank
               {client.you && client.you.lobbyCoins > 0 && (
@@ -78,7 +80,7 @@ export function Hud({ client, version, onOpen }: { client: GameClient; version: 
               )}
             </button>
           )}
-          {client.you && (
+          {client.you && !client.practice && (
             <span className="pill hidden sm:inline-flex">
               <i className="dot bg-acid" />
               {client.you.name ?? shortAddress(client.you.address)}

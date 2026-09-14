@@ -10,8 +10,9 @@ import {
   type StateWire,
   type YouState,
 } from "@/shared/protocol";
-import { socketUrl } from "@/lib/site";
+import { serverUrl, socketUrl } from "@/lib/site";
 import { getSession } from "@/lib/api";
+import { PracticeArena } from "./practice";
 
 /**
  * The browser's copy of the pit.
@@ -125,9 +126,14 @@ function nowTicks(): number {
   return (performance.now() / 1000) * RULES.tickHz;
 }
 
+/** How often a practice pit looks for a real arena. */
+const PROBE_SECONDS = 30;
+
 export class GameClient {
   phase: Phase = "connecting";
-  ws: WebSocket | null = null;
+  ws: WebSocket | PracticeArena | null = null;
+  /** True while the pit is the browser's own practice copy (no arena reachable). */
+  practice = false;
   welcome: Welcome | null = null;
   you: YouState | null = null;
   myId = 0;
@@ -165,6 +171,7 @@ export class GameClient {
   private sentBoost = false;
   private sentAt = 0;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
+  private probeTimer: ReturnType<typeof setInterval> | null = null;
   private pingSentAt = 0;
   private closedByUs = false;
 
@@ -187,12 +194,11 @@ export class GameClient {
     this.phase = "connecting";
     this.bump();
     if (process.env.NODE_ENV !== "production") (window as unknown as { __flypit?: GameClient }).__flypit = this;
-    let ws: WebSocket;
+    let ws: WebSocket | PracticeArena;
     try {
-      ws = new WebSocket(socketUrl());
+      ws = this.practice ? new PracticeArena() : new WebSocket(socketUrl());
     } catch {
-      this.phase = "offline";
-      this.bump();
+      this.startPractice();
       return;
     }
     ws.binaryType = "arraybuffer";
@@ -228,13 +234,44 @@ export class GameClient {
       if (this.closedByUs) return;
       this.phase = "offline";
       this.bump();
+      // No arena answers: open the practice pit rather than an error, and
+      // keep looking for the real one in the background.
       setTimeout(() => {
-        if (!this.closedByUs && !this.ws) this.connect();
-      }, 2500);
+        if (!this.closedByUs && !this.ws) this.startPractice();
+      }, 400);
     };
     ws.onerror = () => {
       /* onclose follows */
     };
+  }
+
+  /** Switches this client to the in-browser pit and starts probing for a real arena. */
+  private startPractice(): void {
+    this.practice = true;
+    this.flies.clear();
+    this.pellets.clear();
+    this.clockAnchor = NaN;
+    if (!this.probeTimer) {
+      this.probeTimer = setInterval(() => void this.probeArena(), PROBE_SECONDS * 1000);
+    }
+    this.connect();
+  }
+
+  /** Is the real arena back? Only switch while nothing of ours is in the practice pit. */
+  private async probeArena(): Promise<void> {
+    if (!this.practice || this.closedByUs) return;
+    const busy = this.phase === "playing";
+    if (busy) return;
+    try {
+      const res = await fetch(serverUrl() + "/status", { cache: "no-store" });
+      if (!res.ok) return;
+    } catch {
+      return;
+    }
+    if (this.probeTimer) clearInterval(this.probeTimer);
+    this.probeTimer = null;
+    this.practice = false;
+    this.reconnect();
   }
 
   /** Reconnect with the session that is in storage now (after sign-in / sign-out). */
@@ -251,6 +288,8 @@ export class GameClient {
   dispose(): void {
     this.closedByUs = true;
     if (this.pingTimer) clearInterval(this.pingTimer);
+    if (this.probeTimer) clearInterval(this.probeTimer);
+    this.probeTimer = null;
     this.ws?.close();
     this.ws = null;
   }

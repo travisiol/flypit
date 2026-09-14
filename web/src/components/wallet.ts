@@ -21,7 +21,8 @@ export function useSignIn(client: GameClient) {
   const injected = connectors[0];
   const hasWallet = typeof window !== "undefined" && !!(window as unknown as { ethereum?: unknown }).ethereum;
   const sessionAddress = client.you?.address ?? null;
-  const signedIn = !!sessionAddress && (!address || sessionAddress === address.toLowerCase());
+  // The practice pit hands out a lobby with no wallet at all.
+  const signedIn = client.practice || (!!sessionAddress && (!address || sessionAddress === address.toLowerCase()));
 
   const signIn = useCallback(async () => {
     setError(null);

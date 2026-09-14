@@ -97,7 +97,7 @@ What the e2e proves: sign-in, faucet, refused under-floor stake, spawn, lobby de
 
 ## Deploying
 
-FLYPIT is two programs — a static page and an arena server (a WebSocket loop at 20 Hz with a SQLite file) — and **the arena cannot run on Vercel**: Vercel's functions cannot hold a socket open or keep a process alive. A page on Vercel with no arena anywhere says "server offline", because it is pointing at the visitor's own machine. So there are two ways to put the game online:
+FLYPIT is two programs — a static page and an arena server (a WebSocket loop at 20 Hz with a SQLite file) — and **the arena cannot run on Vercel**: Vercel's functions cannot hold a socket open or keep a process alive. A page deployed with no arena reachable opens the **practice pit** instead: the same simulation running in the browser, same rules and clocks, the same bots, on play money (`web/src/game/practice.ts`). It says so on the panel, refills its lobby after every life, has no wallet and no bank, and keeps probing for a real arena every 30 s — the moment one answers and you are not mid-flight, it switches over. So a Vercel-only deployment is playable, but it is a demo: the money game needs the arena online, and there are two ways to put it there:
 
 ### The simple way: one service that is the whole game
 

@@ -1,21 +1,8 @@
 import type { WebSocket } from "ws";
-import { RULES, radiusFor } from "../../web/src/shared/rules";
+import { RULES } from "../../web/src/shared/rules";
 import { World, defaultTiming, type Fly, type SimEvent } from "../../web/src/shared/sim";
-import {
-  FLAG_BOOST,
-  FLAG_BOT,
-  FLAG_HATCHES_OPEN,
-  FLAG_IN_HATCH,
-  FLAG_ORPHAN,
-  FLAG_SHIELD,
-  encodeState,
-  type BoardRow,
-  type FlyWire,
-  type RosterEntry,
-  type ServerMessage,
-  type StateWire,
-  type YouState,
-} from "../../web/src/shared/protocol";
+import { encodeState, type BoardRow, type RosterEntry, type ServerMessage, type YouState } from "../../web/src/shared/protocol";
+import { buildState } from "../../web/src/shared/snapshot";
 import { cleanName, hueForIndex, shortAddress } from "../../web/src/shared/names";
 import { chainConfigured, config, liveNote } from "./config";
 import * as db from "./db";
@@ -42,9 +29,6 @@ export interface Client {
   inputWindow: number;
 }
 
-const VIEW_HALF_W = 1400;
-const VIEW_HALF_H = 950;
-const PATH_RESYNC_TICKS = 20;
 const INPUTS_PER_SECOND = 40;
 
 export class Arena {
@@ -316,63 +300,13 @@ export class Arena {
       client.camX = this.specX;
       client.camY = this.specY;
     }
-    const x0 = client.camX - VIEW_HALF_W;
-    const x1 = client.camX + VIEW_HALF_W;
-    const y0 = client.camY - VIEW_HALF_H;
-    const y1 = client.camY + VIEW_HALF_H;
-
-    const flies: FlyWire[] = [];
-    const seen = new Set<number>();
-    for (const f of this.world.flies.values()) {
-      if (!f.alive) continue;
-      if (!this.touchesBox(f, x0, y0, x1, y1)) continue;
-      seen.add(f.id);
-      const last = client.known.get(f.id);
-      const resync = last === undefined || this.world.tick - last >= PATH_RESYNC_TICKS;
-      if (resync) client.known.set(f.id, this.world.tick);
-      let flags = 0;
-      if (f.boosting) flags |= FLAG_BOOST;
-      if (this.world.time < f.shieldUntil) flags |= FLAG_SHIELD;
-      if (f.hatch >= 0) flags |= FLAG_IN_HATCH;
-      if (f.bot) flags |= FLAG_BOT;
-      if (this.world.hatchesOpenFor(f)) flags |= FLAG_HATCHES_OPEN;
-      if (f.orphanedAt !== null) flags |= FLAG_ORPHAN;
-      flies.push({
-        id: f.id,
-        x: f.x,
-        y: f.y,
-        angle: f.angle,
-        coins: f.coins,
-        flags,
-        extract: f.extract / this.world.timing.extractSeconds,
-        segments: f.segments,
-        path: resync ? f.path.slice(0, f.segments + 2) : null,
-      });
-    }
-    for (const id of client.known.keys()) if (!seen.has(id)) client.known.delete(id);
-
-    const pellets = this.world.pelletsInRect(x0, y0, x1, y1).map((p) => ({ id: p.id, x: p.x, y: p.y, value: p.value }));
-    const state: StateWire = {
-      tick: this.world.tick,
-      time: this.world.time,
+    const state = buildState(this.world, {
       camX: client.camX,
       camY: client.camY,
       myId: me && me.alive ? me.id : 0,
-      flies,
-      pellets,
-    };
+      known: client.known,
+    });
     client.ws.send(encodeState(state), { binary: true });
-  }
-
-  private touchesBox(f: Fly, x0: number, y0: number, x1: number, y1: number): boolean {
-    const pad = radiusFor(f.coins) + 40;
-    if (f.x >= x0 - pad && f.x <= x1 + pad && f.y >= y0 - pad && f.y <= y1 + pad) return true;
-    const n = Math.min(f.segments + 1, f.path.length);
-    for (let i = 0; i < n; i += 6) {
-      const p = f.path[i];
-      if (p.x >= x0 - pad && p.x <= x1 + pad && p.y >= y0 - pad && p.y <= y1 + pad) return true;
-    }
-    return false;
   }
 
   // ─────────────────────────────── roster ───────────────────────────────
