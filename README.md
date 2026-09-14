@@ -95,6 +95,33 @@ What the smoothness harness proves (`web/scripts/smooth-test.ts`): with 20 Hz sn
 
 What the e2e proves: sign-in, faucet, refused under-floor stake, spawn, lobby debit, movement from input, death on the wall with the exact drop, a second stake, a hatch held to extraction with the lobby credited by the net, cash-out politely refused without a chain, a dropped socket reattached to the same fly — and the books balanced after every one of those.
 
+## Deploying
+
+FLYPIT is two deployments, because it is two programs:
+
+| What | Where | Why |
+| --- | --- | --- |
+| `web/` — the page | **Vercel** (static export) | It is a folder of files; any host serves it. |
+| `server/` — the arena | **Railway / Fly.io / any box that runs a process** | A WebSocket loop at 20 Hz with a SQLite file. Vercel functions cannot hold a socket open or keep a process alive, so the pit can never live there. |
+
+**1. The page on Vercel.** Connect the repository as it is — root directory left alone. The root [`vercel.json`](vercel.json) installs and builds `web/` and serves `web/out`. Set one environment variable in the Vercel project, then redeploy (it is inlined at build time):
+
+```
+NEXT_PUBLIC_FLYPIT_SERVER=https://<your-arena-host>
+```
+
+Without it the page builds and loads, but points at `localhost:8790` — the visitor's own machine — and says "server offline". (If you would rather set **Root Directory = `web`** in the Vercel dashboard, that works too; Vercel then builds it as a Next app on its own.)
+
+**2. The arena on Railway** (simplest). New project → Deploy from GitHub → this repository. The root [`railway.json`](railway.json) points Railway at [`server/Dockerfile`](server/Dockerfile), which is built from the repository root because the server imports the shared simulation from `web/src/shared`. Then:
+
+- add a **Volume** mounted at `/data` (the SQLite ledger; without it every restart starts from zero);
+- set the variables: `CHAIN=off` for a demo with `DEV_FAUCET=true`, or `CHAIN=on` + `ARENA_ADDRESS` + `TOKEN_ADDRESS` + `PAYOUT_SIGNER_KEY` + `START_BLOCK` for the real thing; `ORIGIN=https://<your-vercel-domain>` so only your page may connect; `BOT_COUNT`, `RAIN_PER_MINUTE`, `EXIT_TOLL_BPS` as you like;
+- generate a domain (Settings → Networking). Railway terminates TLS, so the page's `https://` becomes `wss://` by itself — a browser refuses a plain `ws://` from an `https://` page, which is why the server must sit behind TLS.
+
+[`fly.toml`](fly.toml) does the same on Fly.io (`fly launch --no-deploy`, `fly volumes create flypit_data --size 1`, `fly secrets set …`, `fly deploy`). On a plain VPS: `docker build -f server/Dockerfile -t flypit-arena .` and run it behind Caddy or nginx with TLS.
+
+**3. Wire them.** Put the arena's `https://` URL into `NEXT_PUBLIC_FLYPIT_SERVER` on Vercel and redeploy the page. The pill at the top left says "live on Robinhood Chain" or "no chain yet" once the socket is up; "server offline" means the URL is wrong, the server is down, or `ORIGIN` rejects the page.
+
 ## Going live
 
 1. Deploy the Arena for your token:
@@ -104,7 +131,7 @@ What the e2e proves: sign-in, faucet, refused under-floor stake, spawn, lobby de
    ```
    `SIGNER_ADDRESS` is the address of the server's `PAYOUT_SIGNER_KEY` — a hot key, not the owner. The script prints the env lines for both other packages and writes `web/src/lib/abi`.
 2. Server: `CHAIN=on ARENA_ADDRESS=… TOKEN_ADDRESS=… PAYOUT_SIGNER_KEY=… START_BLOCK=<deploy block>`; drop `TIME_SCALE`, `DEV_FAUCET`, `DEV_AUTH` (the server refuses to start with them on).
-3. Web: `NEXT_PUBLIC_FLYPIT_SERVER=https://<server>` `NEXT_PUBLIC_FLYPIT_ARENA=…` `NEXT_PUBLIC_FLYPIT_TOKEN=…`, then `npm run build` — a static folder.
+3. Web: `NEXT_PUBLIC_FLYPIT_SERVER=https://<server>` `NEXT_PUBLIC_FLYPIT_ARENA=…` `NEXT_PUBLIC_FLYPIT_TOKEN=…` in the Vercel project, then redeploy (see **Deploying**).
 4. Fund the pot from the token's fee wallet: `Arena.fund(amount)` after an approve.
 
 The name lives in three strings of [`web/src/lib/site.ts`](web/src/lib/site.ts) plus the `NEXT_PUBLIC_FLYPIT_*` prefix and the package names.

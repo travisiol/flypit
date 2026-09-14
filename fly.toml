@@ -1,0 +1,27 @@
+# Fly.io alternative to Railway for the arena server. `fly launch --no-deploy`
+# picks this up; then `fly volumes create flypit_data --size 1` and `fly deploy`.
+app = "flypit-arena"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "server/Dockerfile"
+
+[env]
+  PORT = "8790"
+  DB_PATH = "/data/flypit.sqlite"
+
+[[mounts]]
+  source = "flypit_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8790
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[http_service.checks]]
+  path = "/status"
+  interval = "30s"
+  timeout = "5s"

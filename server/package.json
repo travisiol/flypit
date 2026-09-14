@@ -13,12 +13,15 @@
   },
   "dependencies": {
     "viem": "^2.56.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/ws": "^8.5.13",
-    "tsx": "^4.19.2",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.13"
   }
 }
