@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createReadStream, existsSync, statSync } from "node:fs";
+import { extname, resolve, sep } from "node:path";
 import { parseUnits } from "viem";
 import { chainConfigured, config, liveNote } from "./config";
 import { devSession, issueNonce, resolveSession, verifySignature } from "./auth";
@@ -34,6 +36,79 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   if (chunks.length === 0) return {};
   const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+}
+
+// ─────────────────────────────── the page ───────────────────────────────
+
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".ico": "image/x-icon",
+  ".webp": "image/webp",
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".map": "application/json",
+};
+
+/** Resolved once at boot: the page folder, or null when this is an API-only process. */
+export const staticRoot: string | null = (() => {
+  const candidate = config.staticDir ? resolve(config.staticDir) : resolve(process.cwd(), "..", "web", "out");
+  return existsSync(resolve(candidate, "index.html")) ? candidate : null;
+})();
+
+/**
+ * Serves `web/out` — the static export of the page — so the arena is the
+ * whole game on one origin: no CORS, no server URL to configure, and the
+ * socket's `wss://` follows the page's `https://` by itself.
+ */
+function serveStatic(req: IncomingMessage, res: ServerResponse, urlPath: string): boolean {
+  if (!staticRoot) return false;
+  if (req.method !== "GET" && req.method !== "HEAD") return false;
+  let p: string;
+  try {
+    p = decodeURIComponent(urlPath);
+  } catch {
+    return false;
+  }
+  const candidates = p.endsWith("/") ? [`${p}index.html`] : [p, `${p}.html`, `${p}/index.html`];
+  let file: string | null = null;
+  for (const c of candidates) {
+    const full = resolve(staticRoot, `.${c}`);
+    if (!full.startsWith(staticRoot + sep) && full !== staticRoot) continue; // no escaping the folder
+    try {
+      if (statSync(full).isFile()) {
+        file = full;
+        break;
+      }
+    } catch {
+      /* next candidate */
+    }
+  }
+  let status = 200;
+  if (!file) {
+    const notFound = resolve(staticRoot, "404.html");
+    if (!existsSync(notFound)) return false;
+    file = notFound;
+    status = 404;
+  }
+  const type = MIME[extname(file).toLowerCase()] ?? "application/octet-stream";
+  const immutable = p.startsWith("/_next/static/");
+  res.writeHead(status, {
+    "content-type": type,
+    "cache-control": immutable ? "public, max-age=31536000, immutable" : "no-cache",
+  });
+  if (req.method === "HEAD") {
+    res.end();
+    return true;
+  }
+  createReadStream(file).pipe(res);
+  return true;
 }
 
 export function clientIp(req: IncomingMessage): string {
@@ -159,6 +234,7 @@ export async function handleHttp(req: IncomingMessage, res: ServerResponse, aren
       return json(res, 200, { pot: db.potWei().toString() });
     }
 
+    if (serveStatic(req, res, path)) return;
     return json(res, 404, { error: "Not found." });
   } catch (err) {
     return json(res, 400, { error: (err as Error).message });

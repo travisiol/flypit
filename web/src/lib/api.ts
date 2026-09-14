@@ -1,4 +1,4 @@
-import { site } from "@/lib/site";
+import { serverUrl } from "@/lib/site";
 
 /**
  * The arena server's JSON routes. Every call returns the parsed body or
@@ -33,7 +33,7 @@ async function call<T>(path: string, init: RequestInit = {}, auth = false): Prom
   }
   let res: Response;
   try {
-    res = await fetch(site.server + path, { ...init, headers: { ...headers, ...(init.headers as Record<string, string>) } });
+    res = await fetch(serverUrl() + path, { ...init, headers: { ...headers, ...(init.headers as Record<string, string>) } });
   } catch {
     throw new Error("The arena server is not reachable.");
   }

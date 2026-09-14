@@ -189,7 +189,7 @@ export class GameClient {
     if (process.env.NODE_ENV !== "production") (window as unknown as { __flypit?: GameClient }).__flypit = this;
     let ws: WebSocket;
     try {
-      ws = new WebSocket(socketUrl);
+      ws = new WebSocket(socketUrl());
     } catch {
       this.phase = "offline";
       this.bump();

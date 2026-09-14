@@ -15,6 +15,11 @@ export const config = {
   origin: env("ORIGIN", "*"),
   /** Shown in the wallet when signing in. */
   appName: env("APP_NAME", "FLYPIT"),
+  /**
+   * The built page (`web/out`) to serve next to the API, so one process is
+   * the whole game. Empty = auto: `../web/out` if it exists, else API only.
+   */
+  staticDir: env("STATIC_DIR"),
   sessionDays: Number(env("SESSION_DAYS", "7")),
 
   // ── The chain ───────────────────────────────────────────────────────

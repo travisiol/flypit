@@ -4,7 +4,7 @@ import { assertConfig, chainConfigured, config, liveNote } from "./config";
 import { resolveSession } from "./auth";
 import { startChainWatcher, stopChainWatcher, signerAddress } from "./chain";
 import * as db from "./db";
-import { clientIp, handleHttp } from "./http";
+import { clientIp, handleHttp, staticRoot } from "./http";
 import { Arena, type Client } from "./arena";
 import type { ClientMessage } from "../../web/src/shared/protocol";
 
@@ -74,6 +74,7 @@ server.listen(config.port, () => {
   console.log(`[boot] FLYPIT arena on :${config.port} — ws://localhost:${config.port}/ws`);
   console.log(`[boot] chain ${chainConfigured() ? `on (arena ${config.arenaAddress}, signer ${signerAddress})` : `off — ${liveNote()}`}`);
   console.log(`[boot] toll ${config.exitTollBps} bps, bots ${config.botCount}, rain ${config.rainPerMinute}/min, time scale ${config.timeScale}`);
+  console.log(staticRoot ? `[boot] serving the page from ${staticRoot}` : "[boot] no built page found (web/out): API and socket only");
   if (config.devFaucet) console.log("[boot] DEV_FAUCET is on: POST /dev/faucet {address, tokens}");
   if (config.devAuth) console.log("[boot] DEV_AUTH is on: POST /auth/dev {address}");
 });
