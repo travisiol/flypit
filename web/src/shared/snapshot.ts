@@ -9,8 +9,8 @@ import { radiusFor } from "./rules";
 import type { World, Fly } from "./sim";
 import { FLAG_BOOST, FLAG_BOT, FLAG_HATCHES_OPEN, FLAG_IN_HATCH, FLAG_ORPHAN, FLAG_SHIELD, type FlyWire, type StateWire } from "./protocol";
 
-export const VIEW_HALF_W = 1400;
-export const VIEW_HALF_H = 950;
+export const VIEW_HALF_W = 1800;
+export const VIEW_HALF_H = 1250;
 export const PATH_RESYNC_TICKS = 20;
 
 export interface Viewer {

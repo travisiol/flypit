@@ -49,8 +49,15 @@ export const RULES = {
   /** Fraction of your coins each shed drops behind you, floored at one coin. */
   boostShedRate: 0.004,
 
-  /** Extra reach when picking pellets up, on top of the two radii. */
-  pickupMagnet: 10,
+  /** Extra reach when a pellet is finally swallowed, on top of the two radii. */
+  pickupMagnet: 6,
+  /**
+   * Pellets this far from a head (plus the head's radius, ×3) are pulled
+   * toward it and swallowed when they arrive — the slither magnet. The
+   * pull is faster than a boosting fly, so nothing it reaches escapes.
+   */
+  magnetReach: 40,
+  magnetSpeed: 400,
   /** Above this many pellets the smallest ones merge into their neighbours. */
   maxPellets: 4000,
   /** A fly whose socket dropped flies straight for this long, then dies. */
@@ -72,6 +79,11 @@ export function segmentsFor(coins: number): number {
 /** Head radius. Grows slowly — a whale is a long target, not a fat one. */
 export function radiusFor(coins: number): number {
   return 11 + 2.2 * Math.log(1 + Math.max(0, coins) / 500);
+}
+
+/** How far a head pulls pellets in from, centre to centre. */
+export function magnetRadiusFor(coins: number): number {
+  return radiusFor(coins) * 3 + RULES.magnetReach;
 }
 
 /** Body circles are a bit thinner than the head. */

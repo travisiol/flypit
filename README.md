@@ -10,7 +10,7 @@ One screen: the pit is the page.
 
 - Fly toward your pointer. **Hold click / Space to boost** — twice the speed, and it **sheds coins behind you**.
 - **Your head touches any part of another fly → you die.** Head on head, both die. The wall kills.
-- Everything you carried drops on the floor as gold pellets. Anyone eats it. **100 %, no house cut.**
+- Everything you carried drops on the floor as gold pellets. Anyone eats it. **100 %, no house cut.** Pellets within about three head-widths are **pulled into your head** (the magnet, `magnetRadiusFor`), faster than a boosting fly.
 - Size is not safety: a small fly cutting in front of a whale kills it, and the whale drops everything.
 - **Leaving has no button.** After **60 s** alive, fly into a hatch and **hold it 8 s**, killable, no boost, with a ring showing everyone your colour and your countdown. Leave the circle and the meter drains, 3× faster than it fills.
 - **Closing the tab is a death, not a withdrawal**: an orphaned fly flies straight for 6 s, then dies and drops its coins.

@@ -22,7 +22,7 @@ export function Hud({ client, version, onOpen }: { client: GameClient; version: 
     const id = setInterval(() => {
       const me = client.me();
       setLive(me ? { coins: me.coins, flags: me.flags, extract: me.extract, stay: client.stayLeft(), ping: client.ping } : null);
-    }, 250);
+    }, 100);
     return () => clearInterval(id);
   }, [client]);
 

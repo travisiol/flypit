@@ -174,6 +174,23 @@ section("6. Pellets are picked up whole");
   check("both pellets eaten", picked === 200, `${picked}`);
   check("fly now holds 1 200 coins", world.flies.get(a.id)?.coins === 1_200);
   check("floor is empty", world.floorCoins() === 0);
+
+  // The magnet: a pellet 55 units off the flight line is out of touching
+  // range but inside the pull; one 200 units off is out of reach.
+  const world2 = new World(5);
+  const b = world2.spawn({ owner: "b", name: "B", hue: 0, bot: false, coins: 1_000, at: { x: -600, y: 0, angle: 0 } });
+  world2.flies.get(b.id)!.shieldUntil = 0;
+  const sideClose = world2.dropPellet(0, 55, 40);
+  const sideFar = world2.dropPellet(0, 200, 40);
+  const before = { x: sideClose.x, y: sideClose.y };
+  let pulled = false;
+  run(world2, Math.ceil(5 / DT), () => {
+    const p = world2.pellets.get(sideClose.id);
+    if (p && (p.x !== before.x || p.y !== before.y)) pulled = true;
+  });
+  check("a pellet inside the magnet is pulled toward the head", pulled);
+  check("…and swallowed without the head touching where it lay", !world2.pellets.has(sideClose.id) && world2.flies.get(b.id)?.coins === 1_040);
+  check("a pellet outside the magnet stays put", world2.pellets.get(sideFar.id)?.y === 200);
 }
 
 // ─────────────────────────────── 7. boosting ───────────────────────────────

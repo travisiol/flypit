@@ -69,6 +69,10 @@ export function HowItWorks({ client, onClose }: { client: GameClient; onClose: (
                   <strong>Everything you carried drops on the floor</strong> as gold pellets along your body. Anyone can eat it.
                 </li>
                 <li>
+                  Pellets near your head are <strong>pulled into it</strong> — the magnet reaches about three head-widths, and
+                  nothing it grabs escapes. Bigger heads pull from further.
+                </li>
+                <li>
                   Boosting <strong>sheds coins behind you</strong> — {Math.round(RULES.boostShedRate * 4 * 100 * 10) / 10}% of your
                   stack a second, one coin at least. It is the only speed there is, and it costs money. Under{" "}
                   {RULES.boostMinCoins / RULES.coinsPerToken} {symbol} you cannot boost at all.

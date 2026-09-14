@@ -69,8 +69,11 @@ export class Renderer {
     if (w === 0 || h === 0) return;
 
     const me = g.me();
-    const viewW = me ? Math.min(2600, 860 + me.segments * 3.5) : 1900;
-    const targetScale = w / viewW;
+    // A fresh fly sees ~1 500 units across, a whale up to 3 200; but never
+    // so far out that its own head is under 9 CSS pixels.
+    const viewW = me ? Math.min(3200, 1500 + me.segments * 4) : 2200;
+    const minScale = me ? (9 * this.dpr) / radiusFor(me.coins) : 0;
+    const targetScale = Math.max(w / viewW, minScale);
     this.scale += (targetScale - this.scale) * 0.06;
     const s = this.scale;
     this.camX = g.camX;
@@ -119,10 +122,8 @@ export class Renderer {
     }
 
     for (const p of g.pellets.values()) {
-      const px = p.x + p.dx;
-      const py = p.y + p.dy;
-      if (px < x0 - 40 || px > x1 + 40 || py < y0 - 40 || py > y1 + 40) continue;
-      this.drawPellet(px, py, p.value, t + p.id, 1);
+      if (p.x < x0 - 40 || p.x > x1 + 40 || p.y < y0 - 40 || p.y > y1 + 40) continue;
+      this.drawPellet(p.x, p.y, p.value, t + p.id, 1);
     }
     for (const e of g.eaten) {
       const fly = g.flies.get(e.flyId);

@@ -10,6 +10,7 @@ import {
   RULES,
   bodyRadiusFor,
   hatchPositions,
+  magnetRadiusFor,
   radiusFor,
   segmentsFor,
   turnRateFor,
@@ -106,7 +107,7 @@ export interface SpawnOptions {
 }
 
 export function pelletRadius(value: number): number {
-  return 3 + 1.1 * Math.log(1 + Math.max(0, value));
+  return 3.5 + 1.3 * Math.log(1 + Math.max(0, value));
 }
 
 const PELLET_CELL = 64;
@@ -286,7 +287,7 @@ export class World {
     // 3. Pickups, hatches, orphans.
     for (const fly of this.flies.values()) {
       if (!fly.alive) continue;
-      if (this.time >= fly.shieldUntil) this.pickup(fly, events);
+      if (this.time >= fly.shieldUntil) this.pickup(fly, dt, events);
       this.extraction(fly, dt, events);
       if (fly.orphanedAt !== null && this.time - fly.orphanedAt >= this.timing.disconnectGraceSeconds) {
         this.kill(fly, "timeout", null, events);
@@ -441,17 +442,38 @@ export class World {
     }
   }
 
-  private pickup(fly: Fly, events: SimEvent[]): void {
+  /**
+   * The magnet. Every pellet within reach of the head is pulled straight at
+   * it, faster than the fly can fly, and swallowed the moment it touches.
+   * Pellets move; coins never appear or vanish here.
+   */
+  private pickup(fly: Fly, dt: number, events: SimEvent[]): void {
     const r = radiusFor(fly.coins);
-    const reach = r + RULES.pickupMagnet + pelletRadius(1_000_000);
+    const reach = magnetRadiusFor(fly.coins) + pelletRadius(1_000_000);
     const near = this.pelletsNear(fly.x, fly.y, reach);
     for (const p of near) {
-      if (dist(fly.x, fly.y, p.x, p.y) > r + pelletRadius(p.value) + RULES.pickupMagnet) continue;
+      const pr = pelletRadius(p.value);
+      const d = dist(fly.x, fly.y, p.x, p.y);
+      if (d > magnetRadiusFor(fly.coins) + pr) continue;
+      const touch = r + pr + RULES.pickupMagnet;
+      if (d > touch) {
+        // Pull it in, but never past the head.
+        const step = Math.min(RULES.magnetSpeed * dt, d - touch * 0.5);
+        this.movePellet(p, p.x + ((fly.x - p.x) / d) * step, p.y + ((fly.y - p.y) / d) * step);
+        if (dist(fly.x, fly.y, p.x, p.y) > touch) continue;
+      }
       fly.coins += p.value;
       this.gridRemove(p);
       this.pellets.delete(p.id);
       events.push({ type: "pickup", id: fly.id, pelletId: p.id, value: p.value });
     }
+  }
+
+  private movePellet(p: Pellet, x: number, y: number): void {
+    this.gridRemove(p);
+    p.x = x;
+    p.y = y;
+    this.gridAdd(p);
   }
 
   private extraction(fly: Fly, dt: number, events: SimEvent[]): void {

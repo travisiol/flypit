@@ -78,12 +78,15 @@ export interface ClientFly {
 
 export interface ClientPellet {
   id: number;
+  /** Rendered position, interpolated between snapshots (the magnet moves pellets). */
   x: number;
   y: number;
   value: number;
-  /** Render-side drift toward a nearby head. */
-  dx: number;
-  dy: number;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  lerpStart: number;
   born: number;
 }
 
@@ -121,6 +124,8 @@ const RENDER_DELAY_TICKS = 1.5;
 const MAX_EXTRAPOLATE_TICKS = 1.5;
 /** A fly not sampled for this long has left the view. */
 const STALE_TICKS = 6;
+/** Pellets glide between two snapshots over one tick. */
+const LERP_SECONDS = 1 / RULES.tickHz;
 
 function nowTicks(): number {
   return (performance.now() / 1000) * RULES.tickHz;
@@ -448,11 +453,16 @@ export class GameClient {
       seen.add(w.id);
       let p = this.pellets.get(w.id);
       if (!p) {
-        p = { id: w.id, x: w.x, y: w.y, value: w.value, dx: 0, dy: 0, born: this.now };
+        p = { id: w.id, x: w.x, y: w.y, value: w.value, fromX: w.x, fromY: w.y, toX: w.x, toY: w.y, lerpStart: this.now, born: this.now };
         this.pellets.set(w.id, p);
       } else {
-        p.x = w.x;
-        p.y = w.y;
+        if (w.x !== p.toX || w.y !== p.toY) {
+          p.fromX = p.x;
+          p.fromY = p.y;
+          p.toX = w.x;
+          p.toY = w.y;
+          p.lerpStart = this.now;
+        }
         p.value = w.value;
       }
     }
@@ -469,7 +479,7 @@ export class GameClient {
           eater = w.id;
         }
       }
-      if (eater) this.eaten.push({ x: p.x + p.dx, y: p.y + p.dy, value: p.value, flyId: eater, at: this.now });
+      if (eater) this.eaten.push({ x: p.x, y: p.y, value: p.value, flyId: eater, at: this.now });
     }
 
     if (s.myId) {
@@ -524,20 +534,12 @@ export class GameClient {
       this.camX += (this.targetX - this.camX) * 0.14;
       this.camY += (this.targetY - this.camY) * 0.14;
     }
-    // Pellets lean toward a head about to eat them.
-    if (me) {
-      for (const p of this.pellets.values()) {
-        const dx = me.x - p.x;
-        const dy = me.y - p.y;
-        const d = Math.hypot(dx, dy);
-        if (d < 110 && d > 1) {
-          p.dx += ((dx / d) * 34 - p.dx) * 0.18;
-          p.dy += ((dy / d) * 34 - p.dy) * 0.18;
-        } else {
-          p.dx *= 0.85;
-          p.dy *= 0.85;
-        }
-      }
+    // Pellets only move when a magnet pulls them; smooth that between snapshots.
+    for (const p of this.pellets.values()) {
+      if (p.x === p.toX && p.y === p.toY) continue;
+      const k = Math.min(1, (now - p.lerpStart) / LERP_SECONDS);
+      p.x = p.fromX + (p.toX - p.fromX) * k;
+      p.y = p.fromY + (p.toY - p.fromY) * k;
     }
     this.bursts = this.bursts.filter((b) => now - b.at < 1.2);
     this.eaten = this.eaten.filter((e) => now - e.at < 0.22);
